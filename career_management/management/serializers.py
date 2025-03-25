@@ -10,12 +10,7 @@ class AdminSerializer(serializers.ModelSerializer):
 class EmployeSerializer(serializers.ModelSerializer):
     class Meta:
         model = Employe
-        fields = ['id', 'nom', 'email', 'poste', 'equipe', 'password']
-        extra_kwargs = {'password': {'write_only': True}}
-
-    def create(self, validated_data):
-        user = Employe.objects.create_user(**validated_data)
-        return user
+        fields = '__all__'
 
 class FormationSerializer(serializers.ModelSerializer):
     class Meta:
