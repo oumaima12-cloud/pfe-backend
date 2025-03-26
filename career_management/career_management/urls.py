@@ -18,7 +18,8 @@ router.register(r'formulaire', formulaireViewSet)
 
 # Define URL patterns  
 urlpatterns = [  
-    path('admin/', admin.site.urls),  
+    path('admin/', admin.site.urls),
+
     path('api/', include(router.urls)),   
       path('', home, name='home'),  # <-- Ajouter cette ligne
 ]  
