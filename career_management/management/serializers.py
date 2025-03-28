@@ -1,7 +1,21 @@
 from rest_framework import serializers
 from management.models import Employe
-from .models import Admin, Employe, Formation, Evenement, Competence, formulaire
+from .models import Admin, Employe, Formation, Evenement, Competence, formulaire, CustomUser
 
+
+
+
+class CustomUserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CustomUser
+        fields = ['id', 'email', 'first_name', 'last_name', 'date_joined']
+        extra_kwargs = {
+            'password': {'write_only': True}
+        }
+
+    def create(self, validated_data):
+        user = CustomUser.objects.create_user(**validated_data)
+        return user
 class AdminSerializer(serializers.ModelSerializer):
     class Meta:
         model = Admin
@@ -10,7 +24,9 @@ class AdminSerializer(serializers.ModelSerializer):
 class EmployeSerializer(serializers.ModelSerializer):
     class Meta:
         model = Employe
-        fields = '__all__'
+        fields = ['user', 'poste', 'equipe']
+
+
 
 class FormationSerializer(serializers.ModelSerializer):
     class Meta:

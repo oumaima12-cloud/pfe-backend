@@ -27,6 +27,9 @@ SECRET_KEY = 'django-insecure-!n476(zcx6jb875u4%#-j&$)pf(-=0eh)^d#600c-=05md9195
 DEBUG = True
 
 ALLOWED_HOSTS = []
+ACCOUNT_USER_MODEL_USERNAME_FIELD = None
+ACCOUNT_AUTHENTICATION_METHOD = 'email'
+AUTH_USER_MODEL = 'management.CustomUser'
 
 
 # Application definition
@@ -41,6 +44,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
+    'dj_rest_auth',
     'rest_framework.authtoken',
     'management',
 ]
@@ -84,7 +88,7 @@ WSGI_APPLICATION = 'career_management.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',  # Le fichier de la base de données
     }
 }
 
@@ -224,8 +228,19 @@ JAZZMIN_UI_TWEAKS = {
         "success": "btn-success"
     },
     "actions_sticky_top": False
+
 }
 
+FRONTEND_URL = 'http://localhost:3000'
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",  # React tourne généralement sur ce port
+    'http://localhost:3000',  # Vérifie qu'il n'y a pas d'espace ou d'erreur ici
 ]
+ 
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = 'benalgiaoumaima040@gmail.com'  
+EMAIL_HOST_PASSWORD = 'xmcu jiel ankn hljq'  
+
+DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
