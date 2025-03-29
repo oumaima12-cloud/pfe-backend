@@ -21,6 +21,7 @@ from .serializers import AdminSerializer, EmployeSerializer, FormationSerializer
 from django.http import HttpResponse
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import get_user_model
+from rest_framework.decorators import action
 
 
 
@@ -36,10 +37,23 @@ class AdminViewSet(viewsets.ModelViewSet):
     queryset = Admin.objects.all()
     serializer_class = AdminSerializer
 
+
 class EmployeViewSet(viewsets.ModelViewSet):
     queryset = Employe.objects.all()
     serializer_class = EmployeSerializer
 
+    @action(detail=False, methods=['get'], url_path='by_email')
+    def get_by_email(self, request):
+        email = request.query_params.get('email')
+        if not email:
+            return Response({'error': 'Email manquant'}, status=400)
+        try:
+            employe = Employe.objects.get(user__email=email)
+            serializer = self.get_serializer(employe)
+            return Response(serializer.data)
+        except Employe.DoesNotExist:
+            return Response({'error': 'Employé non trouvé'}, status=404)
+   
 class UserViewSet(viewsets.ModelViewSet):
     queryset=CustomUser.objects.all()
     serializer_class=CustomUserSerializer
@@ -54,6 +68,7 @@ class FormationViewSet(viewsets.ModelViewSet):
 class EvenementViewSet(viewsets.ModelViewSet):
     queryset = Evenement.objects.all()
     serializer_class = EvenementSerializer
+    
 
 class CompetenceViewSet(viewsets.ModelViewSet):
     queryset = Competence.objects.all()

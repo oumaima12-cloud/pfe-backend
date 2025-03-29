@@ -20,9 +20,9 @@ router.register(r'formulaire', formulaireViewSet)
 urlpatterns = [  
     path('admin/', admin.site.urls),  
     path('api/', include(router.urls)),
-    path('api/password-reset', PasswordResetRequestView.as_view(), name='password_reset'),
-    path('api/password-reset/confirm', PasswordResetConfirmView.as_view(), name='password_reset_confirm'),
-    path('api/password-reset/complete', PasswordResetCompleteView.as_view(), name='password_reset_complete'),
+    path('api/password-reset/', PasswordResetRequestView.as_view(), name='password_reset'),
+    path('api/password-reset/confirm/', PasswordResetConfirmView.as_view(), name='password_reset_confirm'),
+    path('api/password-reset/confirm/<uidb64>/<token>/', PasswordResetConfirmView.as_view(), name='password_reset_confirm'),
     path('api/signup', SignupView.as_view(), name='signup'),  # Route Inscription
     path('api/login', LoginView.as_view(), name='login'),  # Route Connexion  
     path('', home, name='home'),  # <-- Ajouter cette ligne

@@ -3,3 +3,5 @@ djangorestframework
 django-jazzmin
 django-cors-headers
 whitenoise
+django-extensions
+Pillow

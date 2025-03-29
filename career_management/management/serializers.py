@@ -22,9 +22,11 @@ class AdminSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 class EmployeSerializer(serializers.ModelSerializer):
+    user = CustomUserSerializer(read_only=True)
     class Meta:
         model = Employe
         fields = ['user', 'poste', 'equipe']
+    
 
 
 
