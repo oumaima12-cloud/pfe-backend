@@ -63,21 +63,17 @@ class Evenement(models.Model):
     lieu = models.CharField(max_length=255)
 
 class Competence(models.Model):
-    nom = models.CharField(max_length=255)
-    niveau = models.CharField(max_length=100)
-
-class formulaire(models.Model):
     NIVEAUX = [
         ('Débutant', 'Débutant'),
         ('Intermédiaire', 'Intermédiaire'),
         ('Avancé', 'Avancé'),
         ('Expert', 'Expert'),
     ]
-
-    utilisateur = models.ForeignKey(Employe, on_delete=models.CASCADE, related_name='competences')
-    nom_competence = models.CharField(max_length=100)
+    nom = models.CharField(max_length=255)
     niveau = models.CharField(max_length=20, choices=NIVEAUX, default='Débutant')
-    date_acquisition = models.DateField()
+    
 
-    def __str__(self):
-        return f"{self.utilisateur.nom} - {self.nom_competence} ({self.niveau})"
+class formulaire(models.Model):
+    utilisateur = models.ForeignKey(Employe, on_delete=models.CASCADE, related_name='formulaires')
+    competence = models.ForeignKey(Competence, on_delete=models.CASCADE, related_name='formulaires')
+    date_acquisition = models.DateField()

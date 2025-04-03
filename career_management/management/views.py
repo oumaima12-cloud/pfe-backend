@@ -22,6 +22,9 @@ from django.http import HttpResponse
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import get_user_model
 from rest_framework.decorators import action
+from django.views.decorators.csrf import csrf_exempt
+import json
+import datetime
 
 
 
@@ -77,6 +80,36 @@ class CompetenceViewSet(viewsets.ModelViewSet):
 class formulaireViewSet(viewsets.ModelViewSet):
     queryset = formulaire.objects.all()
     serializer_class = formulaireSerializer
+    def perform_create(self, serializer):
+        try:
+            print("=========================submit form======",self.request.body,"========================================")
+            data = json.loads(self.request.body)  # Récupérer les données envoyées
+            email = data.get("email")  # Email de l'utilisateur
+            nom_competence = data.get("nom_competence")
+            niveau_competence = data.get("niveau")
+
+
+            # Vérifier si l'employé existe
+            employe = Employe.objects.filter(user__email=email).first()
+            if not employe:
+                return JsonResponse({"error": "Employé non trouvé"}, status=404)
+
+            new_competence=Competence.objects.create(
+                nom=nom_competence,
+                niveau=niveau_competence
+                )
+
+            # Créer et enregistrer le formulaire
+            new_formulaire = formulaire.objects.create(
+                utilisateur=employe,
+                competence=new_competence,
+                date_acquisition=datetime.datetime.today(),
+            )
+
+            return JsonResponse({"message": "Formulaire soumis avec succès!"}, status=201)
+
+        except Exception as e:
+            return JsonResponse({"error": str(e)}, status=400)
 
 class PasswordResetRequestView(APIView):
     def post(self, request):
@@ -202,5 +235,37 @@ class LoginView(APIView):
         else:
             return Response({'error': 'L\'utilisateur n\'existe pas'}, status=status.HTTP_404_NOT_FOUND)
         
+@csrf_exempt  # Désactive temporairement la protection CSRF (pour les tests)
+def submit_formulaire(request):
+    if request.method == "POST":
+        try:
+            print("=========================submit form======",request.body,"========================================")
+            data = json.loads(request.body)  # Récupérer les données envoyées
+            email = data.get("email")  # Email de l'utilisateur
+            nom_competence = data.get("nom_competence")
+            niveau_competence = data.get("niveau")
+            # date_acquisition = data.get("date_acquisition")
 
-# ✅ API CRUD pour les modèles
+            # Vérifier si l'employé existe
+            employe = Employe.objects.filter(user__email=email).first()
+            if not employe:
+                return JsonResponse({"error": "Employé non trouvé"}, status=404)
+
+            new_competence=Competence.objects.create(
+                nom=nom_competence,
+                niveau=niveau_competence
+                )
+
+            # Créer et enregistrer le formulaire
+            new_formulaire = formulaire.objects.create(
+                utilisateur=employe,
+                competence=new_competence,
+                date_acquisition=datetime.datetime.today(),
+            )
+
+            return JsonResponse({"message": "Formulaire soumis avec succès!"}, status=201)
+
+        except Exception as e:
+            return JsonResponse({"error": str(e)}, status=400)
+
+    return JsonResponse({"error": "Méthode non autorisée"}, status=405)

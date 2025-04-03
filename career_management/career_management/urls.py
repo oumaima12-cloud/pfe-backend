@@ -4,7 +4,8 @@ from rest_framework.routers import DefaultRouter
 from management.views import AdminViewSet, EmployeViewSet, FormationViewSet, EvenementViewSet, CompetenceViewSet, LoginView, SignupView, formulaireViewSet,UserViewSet
 from django.http import HttpResponse 
 from management.views import home  
-from management.views import PasswordResetRequestView, PasswordResetConfirmView, PasswordResetCompleteView,UserListView
+from management.views import PasswordResetRequestView, PasswordResetConfirmView, PasswordResetCompleteView, UserListView
+from management.views import submit_formulaire
 
 # Initialize the router  
 router = DefaultRouter()  
@@ -25,5 +26,6 @@ urlpatterns = [
     path('api/password-reset/confirm/<uidb64>/<token>/', PasswordResetConfirmView.as_view(), name='password_reset_confirm'),
     path('api/signup', SignupView.as_view(), name='signup'),  # Route Inscription
     path('api/login', LoginView.as_view(), name='login'),  # Route Connexion  
+    path('api/formulaire/submit', submit_formulaire, name='submit_formulaire'),
     path('', home, name='home'),  # <-- Ajouter cette ligne
 ]
