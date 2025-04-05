@@ -23,9 +23,13 @@ class AdminSerializer(serializers.ModelSerializer):
 
 class EmployeSerializer(serializers.ModelSerializer):
     user = CustomUserSerializer(read_only=True)
+    competences = serializers.DictField(
+        child=serializers.ChoiceField(choices=Employe.NIVEAUX),
+        allow_empty=True
+    )
     class Meta:
         model = Employe
-        fields = ['user', 'poste', 'equipe']
+        fields = ['user', 'poste', 'equipe','competences']
     
 
 
@@ -45,6 +49,19 @@ class CompetenceSerializer(serializers.ModelSerializer):
         model = Competence
         fields = '__all__'
 class formulaireSerializer(serializers.ModelSerializer):
-   class Meta :
-    model = formulaire
-    fields = '__all__'
+    utilisateur=EmployeSerializer(read_only=True)
+    competences = serializers.ListField(
+        child=serializers.DictField(),
+        allow_empty=True
+    )
+    class Meta :
+        model = formulaire
+        fields = '__all__'
+    def get_utilisateur(self, obj):
+        return {
+            "id": obj.utilisateur.id,
+            "first_name": obj.utilisateur.user.first_name,
+            "last_name": obj.utilisateur.user.last_name,
+            "email": obj.utilisateur.user.email
+        }
+    

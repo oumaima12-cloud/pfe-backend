@@ -5,3 +5,4 @@ django-cors-headers
 whitenoise
 django-extensions
 Pillow
+djangorestframework-simplejwt

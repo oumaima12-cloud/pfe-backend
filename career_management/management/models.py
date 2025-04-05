@@ -42,10 +42,14 @@ class Admin(models.Model):
     # You can still add other admin-specific fields if needed.
 
 class Employe(models.Model):
+    NIVEAUX = ['Débutant', 'Intermédiaire', 'Avancé', 'Expert']
     user = models.OneToOneField(CustomUser, on_delete=models.CASCADE)  # Lien avec CustomUser
     poste = models.CharField(max_length=255, blank=True, null=True)
     equipe = models.CharField(max_length=255, blank=True, null=True)
-
+    competences = models.JSONField(
+        default=dict,
+        blank=True,
+    )  
     def __str__(self):
         return f"{self.user.first_name} {self.user.last_name}"
 
@@ -63,17 +67,17 @@ class Evenement(models.Model):
     lieu = models.CharField(max_length=255)
 
 class Competence(models.Model):
-    NIVEAUX = [
-        ('Débutant', 'Débutant'),
-        ('Intermédiaire', 'Intermédiaire'),
-        ('Avancé', 'Avancé'),
-        ('Expert', 'Expert'),
-    ]
-    nom = models.CharField(max_length=255)
-    niveau = models.CharField(max_length=20, choices=NIVEAUX, default='Débutant')
+    nom = models.CharField(max_length=255,unique=True)
+   
     
 
 class formulaire(models.Model):
+   
     utilisateur = models.ForeignKey(Employe, on_delete=models.CASCADE, related_name='formulaires')
-    competence = models.ForeignKey(Competence, on_delete=models.CASCADE, related_name='formulaires')
+    competences = models.JSONField(
+        default=list,
+        blank=True,
+    )
+    
     date_acquisition = models.DateField()
+   

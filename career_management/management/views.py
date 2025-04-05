@@ -1,5 +1,6 @@
 from django.shortcuts import render
 from rest_framework import viewsets, status
+from django.contrib.auth import authenticate
 import logging
 from django.contrib.auth.tokens import default_token_generator
 from django.contrib.auth.models import User
@@ -29,7 +30,6 @@ import datetime
 
 
 User = get_user_model()
-
 
 logger = logging.getLogger(__name__)
 
@@ -80,36 +80,7 @@ class CompetenceViewSet(viewsets.ModelViewSet):
 class formulaireViewSet(viewsets.ModelViewSet):
     queryset = formulaire.objects.all()
     serializer_class = formulaireSerializer
-    def perform_create(self, serializer):
-        try:
-            print("=========================submit form======",self.request.body,"========================================")
-            data = json.loads(self.request.body)  # Récupérer les données envoyées
-            email = data.get("email")  # Email de l'utilisateur
-            nom_competence = data.get("nom_competence")
-            niveau_competence = data.get("niveau")
-
-
-            # Vérifier si l'employé existe
-            employe = Employe.objects.filter(user__email=email).first()
-            if not employe:
-                return JsonResponse({"error": "Employé non trouvé"}, status=404)
-
-            new_competence=Competence.objects.create(
-                nom=nom_competence,
-                niveau=niveau_competence
-                )
-
-            # Créer et enregistrer le formulaire
-            new_formulaire = formulaire.objects.create(
-                utilisateur=employe,
-                competence=new_competence,
-                date_acquisition=datetime.datetime.today(),
-            )
-
-            return JsonResponse({"message": "Formulaire soumis avec succès!"}, status=201)
-
-        except Exception as e:
-            return JsonResponse({"error": str(e)}, status=400)
+ 
 
 class PasswordResetRequestView(APIView):
     def post(self, request):
@@ -210,62 +181,125 @@ class SignupView(APIView):
 # ✅ API pour la connexion
 class LoginView(APIView):
     permission_classes = [AllowAny]
-    print("debug login")
+
     def post(self, request):
-        
+        print("debug login")
         email = request.data.get('email')
         password = request.data.get('password')
 
-        # Query the Employe model by the related User's email
-        employe = Employe.objects.filter(user__email=email).first()  # user__email accesses the email field of the related User model
+        # Vérifier si l'utilisateur existe dans la base de données
+        user = authenticate(username=email, password=password)
 
-        if employe:
-            # Check the password via the User model, which is linked to Employe
-            user = employe.user  
-            print("debbug user ",user)# Access the User object from the related Employe instance
-            if user.check_password(password):
-                tokens = get_tokens_for_user(user)  # Generate tokens for the user
+        if user:
+            # 🔹 Déterminer le rôle
+            if user.is_staff:  # Admin Django
+                role = "admin"
+            else:
+                employe = Employe.objects.filter(user=user).first()
+                role = "employe" if employe else "unknown"
 
-                return Response({
-                    'user':CustomUserSerializer(user).data,
-                    'employe': EmployeSerializer(employe).data,  # Serialize the User data
-                    'tokens': tokens  # Include JWT tokens in the response
-                }, status=status.HTTP_200_OK)
-            return Response({'error': 'Email ou mot de passe incorrect'}, status=status.HTTP_401_UNAUTHORIZED)
-        else:
-            return Response({'error': 'L\'utilisateur n\'existe pas'}, status=status.HTTP_404_NOT_FOUND)
+            # 🔹 Générer le token JWT
+            tokens = get_tokens_for_user(user)
+
+            return Response({
+                "user": CustomUserSerializer(user).data,
+                "role": role,
+                "tokens": tokens
+            }, status=status.HTTP_200_OK)
         
-@csrf_exempt  # Désactive temporairement la protection CSRF (pour les tests)
+        return Response({'error': 'Email ou mot de passe incorrect'}, status=status.HTTP_401_UNAUTHORIZED)
+        
+
+
+# @csrf_exempt  # Désactive temporairement la protection CSRF (pour les tests)
+# def submit_formulaire(request):
+#     if request.method == "POST":
+#         try:
+#             print("=========================submit form==============================================")
+           
+#             data = json.loads(request.body)  # Récupérer les données envoyées
+#             print(data)
+#             # email = data.get("email")  # Email de l'utilisateur
+#             # competences=data.get("competences",[])
+           
+
+#             # # Vérifier si l'employé existe
+#             # employe = Employe.objects.filter(user__email=email).first()
+#             # if not employe:
+#             #     return JsonResponse({"error": "Employé non trouvé"}, status=404)
+            
+#             # for competence in competences:
+#             #     nom_competence=competence.get("nom_competence")
+#             #     niveau_competence=competence.get("niveau")
+#             #     if not nom_competence or not niveau_competence:
+#             #         continue
+#             #     employe.competences[nom_competence]=niveau_competence
+#             # employe.save()
+
+
+          
+      
+
+#             # # Créer et enregistrer le formulaire
+#             # new_formulaire = formulaire.objects.create(
+#             #     utilisateur=employe,
+#             #     date_acquisition=datetime.datetime.today(),
+#             # )
+
+#             return JsonResponse({"message": "Formulaire soumis avec succès!"}, status=201)
+#         except e:
+#             print(e)
+
+@csrf_exempt
 def submit_formulaire(request):
     if request.method == "POST":
         try:
-            print("=========================submit form======",request.body,"========================================")
-            data = json.loads(request.body)  # Récupérer les données envoyées
-            email = data.get("email")  # Email de l'utilisateur
-            nom_competence = data.get("nom_competence")
-            niveau_competence = data.get("niveau")
-            # date_acquisition = data.get("date_acquisition")
-
+            print("\n=== Nouvelle requête reçue ===")
+         
+            # print("\nCorps brut:", request.body)
+            
+            try:
+                data = json.loads(request.body)
+                # print("\nDonnées JSON parsées:")
+                print(json.dumps(data, indent=2))
+            except json.JSONDecodeError as e:
+                # print("\nErreur de décodage JSON:", str(e))
+                return JsonResponse({"error": "Invalid JSON format"}, status=400)
+            
+            # Simulation de traitement
+            print("\nSimulation de traitement...")
+            if not data.get('email'):
+                print("Avertissement: Email manquant dans les données")
+            
+ 
             # Vérifier si l'employé existe
-            employe = Employe.objects.filter(user__email=email).first()
+            employe = Employe.objects.filter(user__email=data.get('email')).first()
             if not employe:
                 return JsonResponse({"error": "Employé non trouvé"}, status=404)
-
-            new_competence=Competence.objects.create(
-                nom=nom_competence,
-                niveau=niveau_competence
-                )
-
-            # Créer et enregistrer le formulaire
-            new_formulaire = formulaire.objects.create(
+            competences=data.get('competences')
+            if not competences:
+                return JsonResponse({"error": "Competences non envoyées"}, status=404)
+            
+            for competence in competences:
+                nom_competence=competence.get("nom_competence")
+                niveau_competence=competence.get("niveau")
+                if not nom_competence or not niveau_competence:
+                    continue
+                employe.competences[nom_competence]=niveau_competence
+            employe.save()
+            formul=formulaire.objects.create(
                 utilisateur=employe,
-                competence=new_competence,
-                date_acquisition=datetime.datetime.today(),
+                competences=competences,
+                date_acquisition=datetime.datetime.today()
             )
 
-            return JsonResponse({"message": "Formulaire soumis avec succès!"}, status=201)
 
+            # print("\nRéponse envoyée:", json.dumps(response_data, indent=2))
+            return JsonResponse({"message": "Réponse envoyée"}, status=200)
+            
         except Exception as e:
-            return JsonResponse({"error": str(e)}, status=400)
-
-    return JsonResponse({"error": "Méthode non autorisée"}, status=405)
+            print("\nErreur interne:", str(e))
+            return JsonResponse({"error": "Internal server error"}, status=500)
+    
+    print("\nMéthode non autorisée:", request.method)
+    return JsonResponse({"error": "Method not allowed"}, status=405)
