@@ -245,3 +245,6 @@ EMAIL_HOST_USER = 'benalgiaoumaima040@gmail.com'
 EMAIL_HOST_PASSWORD = 'xmcu jiel ankn hljq'  
 
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
+
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'

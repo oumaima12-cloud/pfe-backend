@@ -4,6 +4,7 @@ from django.contrib.auth import authenticate
 import logging
 from django.contrib.auth.tokens import default_token_generator
 from django.contrib.auth.models import User
+from rest_framework.decorators import api_view
 from django.core.mail import send_mail
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.utils.encoding import force_bytes
@@ -18,7 +19,7 @@ from management.models import Employe
 from management.serializers import EmployeSerializer
 from django.http import HttpResponse
 from .models import Admin, Employe, Formation, Evenement, Competence, formulaire,CustomUser
-from .serializers import AdminSerializer, EmployeSerializer, FormationSerializer, EvenementSerializer, CompetenceSerializer,  formulaireSerializer,CustomUserSerializer
+from .serializers import AdminSerializer, EmployeSerializer, FormationSerializer, EvenementSerializer, CompetenceSerializer,  formulaireSerializer,CustomUserSerializer,NotificationSerializer
 from django.http import HttpResponse
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import get_user_model
@@ -26,6 +27,7 @@ from rest_framework.decorators import action
 from django.views.decorators.csrf import csrf_exempt
 import json
 import datetime
+from rest_framework.parsers import MultiPartParser, FormParser
 
 
 
@@ -41,22 +43,60 @@ class AdminViewSet(viewsets.ModelViewSet):
     serializer_class = AdminSerializer
 
 
+from datetime import datetime
+
+
 class EmployeViewSet(viewsets.ModelViewSet):
     queryset = Employe.objects.all()
     serializer_class = EmployeSerializer
 
-    @action(detail=False, methods=['get'], url_path='by_email')
-    def get_by_email(self, request):
-        email = request.query_params.get('email')
-        if not email:
-            return Response({'error': 'Email manquant'}, status=400)
+    def update(self, request, *args, **kwargs):
+        # Récupérer l'email depuis l'URL
+        email = kwargs.get('email')
+
+        # Chercher l'employé par email
         try:
             employe = Employe.objects.get(user__email=email)
-            serializer = self.get_serializer(employe)
-            return Response(serializer.data)
         except Employe.DoesNotExist:
-            return Response({'error': 'Employé non trouvé'}, status=404)
-   
+            return Response({'error': 'Employé non trouvé'}, status=status.HTTP_404_NOT_FOUND)
+
+        # Sérialiser les données envoyées par la requête
+        serializer = self.get_serializer(employe, data=request.data, partial=False)
+
+        # Valider les données
+        if serializer.is_valid():
+            # Mettre à jour l'employé
+            serializer.save()
+
+            # Si des informations utilisateur sont envoyées (comme le prénom, le nom, l'email)
+            if 'user' in request.data:
+                user_data = request.data['user']
+                if 'first_name' in user_data:
+                    employe.user.first_name = user_data['first_name']
+                if 'last_name' in user_data:
+                    employe.user.last_name = user_data['last_name']
+                if 'email' in user_data:
+                    employe.user.email = user_data['email']
+                employe.user.save()  # Sauvegarder les données de l'utilisateur
+
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    @action(detail=False, methods=['get'], url_path='by_email/(?P<email>[^/]+)')
+    def get_by_email(self, request, email=None):
+        # L'email est récupéré directement de l'URL
+        if not email:
+            return Response({'error': 'Email manquant'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            # Chercher l'employé avec l'email passé dans l'URL
+            employe = Employe.objects.get(user__email=email)
+            # Serialiser les données de l'employé trouvé
+            serializer = self.get_serializer(employe)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        except Employe.DoesNotExist:
+            return Response({'error': 'Employé non trouvé'}, status=status.HTTP_404_NOT_FOUND)
+
 class UserViewSet(viewsets.ModelViewSet):
     queryset=CustomUser.objects.all()
     serializer_class=CustomUserSerializer
@@ -150,17 +190,17 @@ class UserListView(APIView):
 class SignupView(APIView):
     def post(self, request, *args, **kwargs):
         data = request.data
-        
-        # Ensure that the data contains the necessary fields
-        required_fields = ['email', 'firstname', 'lastname', 'password']
-        print("debug signup request ",data)
+        print("debug data from signup ",data)
+
+        # Vérifier que les champs requis sont présents dans la requête
+        required_fields = ['email', 'firstname', 'lastname', 'password', 'profile_picture', 'poste', 'equipe']
         if not all(field in data for field in required_fields):
             return Response(
                 {'detail': 'Missing required fields.'}, 
                 status=status.HTTP_400_BAD_REQUEST
             )
-        
-        # Create a new user
+
+        # Créer l'utilisateur
         try:
             user = CustomUser.objects.create_user(
                 email=data['email'],
@@ -168,16 +208,24 @@ class SignupView(APIView):
                 last_name=data['lastname'],
                 password=data['password']
             )
+
+            # Gérer l'upload de l'image de profil
+            if 'profile_picture' in request.FILES:
+                user.profile_picture = request.FILES['profile_picture']
+                user.save()
+
+            # Créer l'employé lié à l'utilisateur
             employe = Employe.objects.create(
-            user=user,
-            poste=data['poste'],
-            equipe=data['equipe']
-        )
+                user=user,
+                poste=data['poste'],
+                equipe=data['equipe']
+            )
+
+            # Réponse de succès avec les détails de l'utilisateur créé
             return Response({'detail': 'User created successfully.'}, status=status.HTTP_201_CREATED)
-        
+
         except Exception as e:
             return Response({'detail': str(e)}, status=status.HTTP_400_BAD_REQUEST)
-
 # ✅ API pour la connexion
 class LoginView(APIView):
     permission_classes = [AllowAny]
@@ -249,57 +297,129 @@ class LoginView(APIView):
 #             return JsonResponse({"message": "Formulaire soumis avec succès!"}, status=201)
 #         except e:
 #             print(e)
-
 @csrf_exempt
 def submit_formulaire(request):
     if request.method == "POST":
         try:
             print("\n=== Nouvelle requête reçue ===")
-         
-            # print("\nCorps brut:", request.body)
-            
+            print("\nCorps brut:", request.body)
+
             try:
                 data = json.loads(request.body)
-                # print("\nDonnées JSON parsées:")
                 print(json.dumps(data, indent=2))
             except json.JSONDecodeError as e:
-                # print("\nErreur de décodage JSON:", str(e))
                 return JsonResponse({"error": "Invalid JSON format"}, status=400)
-            
-            # Simulation de traitement
-            print("\nSimulation de traitement...")
+
+            # Simulation de traitement...
             if not data.get('email'):
-                print("Avertissement: Email manquant dans les données")
+                return JsonResponse({"error": "Email manquant dans les données"}, status=400)
             
- 
             # Vérifier si l'employé existe
             employe = Employe.objects.filter(user__email=data.get('email')).first()
             if not employe:
                 return JsonResponse({"error": "Employé non trouvé"}, status=404)
-            competences=data.get('competences')
+
+            competences = data.get('competences')
             if not competences:
-                return JsonResponse({"error": "Competences non envoyées"}, status=404)
-            
+                return JsonResponse({"error": "Competences non envoyées"}, status=400)
+
+            # Mise à jour des compétences de l'employé
             for competence in competences:
-                nom_competence=competence.get("nom_competence")
-                niveau_competence=competence.get("niveau")
+                nom_competence = competence.get("nom_competence")
+                niveau_competence = competence.get("niveau")
                 if not nom_competence or not niveau_competence:
                     continue
-                employe.competences[nom_competence]=niveau_competence
+                employe.competences[nom_competence] = niveau_competence
+
+            # Mise à jour de la date d'embauche
+            if data.get("date_join"):
+                try:
+                    # Assurez-vous que la date est bien formatée avant de la sauvegarder
+                    employe.date_join = datetime.datetime.strptime(data["date_join"], "%Y-%m-%d").date()
+                except ValueError:
+                    return JsonResponse({"error": "Format de la date d'embauche invalide. Utilisez 'YYYY-MM-DD'."}, status=400)
+
+            # Sauvegarde de l'employé avec la nouvelle date
             employe.save()
-            formul=formulaire.objects.create(
+
+            # Créer un formulaire associé à l'employé
+            formul = formulaire.objects.create(
                 utilisateur=employe,
                 competences=competences,
                 date_acquisition=datetime.datetime.today()
             )
 
-
-            # print("\nRéponse envoyée:", json.dumps(response_data, indent=2))
             return JsonResponse({"message": "Réponse envoyée"}, status=200)
-            
+
         except Exception as e:
             print("\nErreur interne:", str(e))
             return JsonResponse({"error": "Internal server error"}, status=500)
-    
+
     print("\nMéthode non autorisée:", request.method)
     return JsonResponse({"error": "Method not allowed"}, status=405)
+
+
+@api_view(['POST'])
+def participer(request):
+    email = request.data.get('email')
+    formation_id = request.data.get('formation_id')
+    evenement_id = request.data.get('evenement_id')
+
+    if not email:
+        return Response({"error": "Email requis"}, status=400)
+
+    try:
+        employe = Employe.objects.get(user__email=email)
+
+        if formation_id:
+            formation = Formation.objects.get(id=formation_id)
+            formation.participants.add(employe)
+            return Response({"message": "Participation à la formation réussie."})
+
+        elif evenement_id:
+            evenement = Evenement.objects.get(id=evenement_id)
+            evenement.participants.add(employe)
+            return Response({"message": "Participation à l'événement réussie."})
+
+        return Response({"error": "Aucun ID de formation ou d'événement fourni."}, status=400)
+
+    except Employe.DoesNotExist:
+        return Response({"error": "Employé non trouvé."}, status=404)
+    except Exception as e:
+        return Response({"error": str(e)}, status=500)
+
+from rest_framework.views import APIView
+from rest_framework.response import Response
+
+class ProfilEmployeView(APIView):
+    def get(self, request):
+        employe = request.user.employe
+        formations = employe.formations.all()
+        evenements = employe.evenements.all()
+
+        formation_serializer = FormationSerializer(formations, many=True)
+        evenement_serializer = EvenementSerializer(evenements, many=True)
+
+        return Response({
+            "formations": formation_serializer.data,
+            "evenements": evenement_serializer.data
+        })
+    
+class CustomUserViewSet(viewsets.ModelViewSet):
+    queryset = CustomUser.objects.all()
+    serializer_class = CustomUserSerializer
+    parser_classes = (MultiPartParser, FormParser)
+
+
+from .models import Notification
+from .serializers import NotificationSerializer
+from rest_framework import viewsets
+from rest_framework.permissions import IsAuthenticated
+
+class NotificationViewSet(viewsets.ModelViewSet):
+    queryset = Notification.objects.all()
+    serializer_class = NotificationSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return self.queryset.filter(user=self.request.user).order_by('-created_at')

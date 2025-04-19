@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from management.models import Employe
-from .models import Admin, Employe, Formation, Evenement, Competence, formulaire, CustomUser
+from .models import Admin, Employe, Formation, Evenement, Competence, formulaire, CustomUser, Notification
 
 
 
@@ -8,7 +8,7 @@ from .models import Admin, Employe, Formation, Evenement, Competence, formulaire
 class CustomUserSerializer(serializers.ModelSerializer):
     class Meta:
         model = CustomUser
-        fields = ['id', 'email', 'first_name', 'last_name', 'date_joined']
+        fields = ['id', 'email', 'first_name', 'profile_picture', 'last_name', 'date_joined']
         extra_kwargs = {
             'password': {'write_only': True}
         }
@@ -27,9 +27,10 @@ class EmployeSerializer(serializers.ModelSerializer):
         child=serializers.ChoiceField(choices=Employe.NIVEAUX),
         allow_empty=True
     )
+    date_join = serializers.DateField()
     class Meta:
         model = Employe
-        fields = ['user', 'poste', 'equipe','competences']
+        fields = ['user', 'poste', 'equipe','competences','date_join']
     
 
 
@@ -48,6 +49,11 @@ class CompetenceSerializer(serializers.ModelSerializer):
     class Meta:
         model = Competence
         fields = '__all__'
+
+
+
+       
+
 class formulaireSerializer(serializers.ModelSerializer):
     utilisateur=EmployeSerializer(read_only=True)
     competences = serializers.ListField(
@@ -65,3 +71,8 @@ class formulaireSerializer(serializers.ModelSerializer):
             "email": obj.utilisateur.user.email
         }
     
+    
+class NotificationSerializer(serializers.ModelSerializer):
+            class Meta:
+               model = Notification
+            fields = '__all__'
