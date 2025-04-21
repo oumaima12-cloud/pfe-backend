@@ -9,7 +9,6 @@ from django.core.mail import send_mail
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.utils.encoding import force_bytes
 from rest_framework import status, generics
-from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from django.conf import settings
@@ -26,9 +25,9 @@ from django.contrib.auth import get_user_model
 from rest_framework.decorators import action
 from django.views.decorators.csrf import csrf_exempt
 import json
-import datetime
 from rest_framework.parsers import MultiPartParser, FormParser
-
+from rest_framework.permissions import IsAuthenticated, AllowAny
+from datetime import datetime
 
 
 User = get_user_model()
@@ -43,32 +42,30 @@ class AdminViewSet(viewsets.ModelViewSet):
     serializer_class = AdminSerializer
 
 
-from datetime import datetime
+
+
+
 
 
 class EmployeViewSet(viewsets.ModelViewSet):
+    permission_classes = [AllowAny]
+
+
     queryset = Employe.objects.all()
     serializer_class = EmployeSerializer
-
     def update(self, request, *args, **kwargs):
-        # Récupérer l'email depuis l'URL
-        email = kwargs.get('email')
-
-        # Chercher l'employé par email
+        # Récupérer l'employé par ID
         try:
-            employe = Employe.objects.get(user__email=email)
+            employe = Employe.objects.get(id=kwargs['pk'])  # Utilisation de kwargs['pk'] pour accéder à l'ID
         except Employe.DoesNotExist:
-            return Response({'error': 'Employé non trouvé'}, status=status.HTTP_404_NOT_FOUND)
+            return Response({"error": "Employé non trouvé"}, status=status.HTTP_404_NOT_FOUND)
 
-        # Sérialiser les données envoyées par la requête
-        serializer = self.get_serializer(employe, data=request.data, partial=False)
-
-        # Valider les données
+        # Sérialiser les données envoyées dans la requête
+        serializer = self.get_serializer(employe, data=request.data, partial=True)  # partial=True pour la mise à jour partielle
         if serializer.is_valid():
-            # Mettre à jour l'employé
             serializer.save()
 
-            # Si des informations utilisateur sont envoyées (comme le prénom, le nom, l'email)
+            # Si des informations utilisateur sont envoyées dans la requête
             if 'user' in request.data:
                 user_data = request.data['user']
                 if 'first_name' in user_data:
@@ -77,25 +74,24 @@ class EmployeViewSet(viewsets.ModelViewSet):
                     employe.user.last_name = user_data['last_name']
                 if 'email' in user_data:
                     employe.user.email = user_data['email']
-                employe.user.save()  # Sauvegarder les données de l'utilisateur
+                employe.user.save()  # Sauvegarder les informations de l'utilisateur
 
             return Response(serializer.data, status=status.HTTP_200_OK)
-        else:
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     @action(detail=False, methods=['get'], url_path='by_email/(?P<email>[^/]+)')
     def get_by_email(self, request, email=None):
-        # L'email est récupéré directement de l'URL
         if not email:
             return Response({'error': 'Email manquant'}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
-            # Chercher l'employé avec l'email passé dans l'URL
             employe = Employe.objects.get(user__email=email)
-            # Serialiser les données de l'employé trouvé
             serializer = self.get_serializer(employe)
             return Response(serializer.data, status=status.HTTP_200_OK)
         except Employe.DoesNotExist:
             return Response({'error': 'Employé non trouvé'}, status=status.HTTP_404_NOT_FOUND)
+
+
 
 class UserViewSet(viewsets.ModelViewSet):
     queryset=CustomUser.objects.all()
@@ -107,6 +103,8 @@ class FormationViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         instance = serializer.save()
         print(f"Formation créée avec succès : {instance}")
+
+
 
 class EvenementViewSet(viewsets.ModelViewSet):
     queryset = Evenement.objects.all()
@@ -334,10 +332,10 @@ def submit_formulaire(request):
             # Mise à jour de la date d'embauche
             if data.get("date_join"):
                 try:
-                    # Assurez-vous que la date est bien formatée avant de la sauvegarder
-                    employe.date_join = datetime.datetime.strptime(data["date_join"], "%Y-%m-%d").date()
+                    employe.date_join = datetime.strptime(data["date_join"], "%Y-%m-%d").date()
                 except ValueError:
                     return JsonResponse({"error": "Format de la date d'embauche invalide. Utilisez 'YYYY-MM-DD'."}, status=400)
+
 
             # Sauvegarde de l'employé avec la nouvelle date
             employe.save()
@@ -346,7 +344,7 @@ def submit_formulaire(request):
             formul = formulaire.objects.create(
                 utilisateur=employe,
                 competences=competences,
-                date_acquisition=datetime.datetime.today()
+                date_acquisition=datetime.today()
             )
 
             return JsonResponse({"message": "Réponse envoyée"}, status=200)

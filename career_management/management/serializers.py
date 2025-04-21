@@ -30,7 +30,7 @@ class EmployeSerializer(serializers.ModelSerializer):
     date_join = serializers.DateField()
     class Meta:
         model = Employe
-        fields = ['user', 'poste', 'equipe','competences','date_join']
+        fields = ['id','user', 'poste', 'equipe','competences','date_join']
     
 
 

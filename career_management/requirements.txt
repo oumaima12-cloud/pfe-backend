@@ -6,3 +6,4 @@ whitenoise
 django-extensions
 Pillow
 djangorestframework-simplejwt
+dj_rest_auth
