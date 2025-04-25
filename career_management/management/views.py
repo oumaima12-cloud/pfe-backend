@@ -91,7 +91,10 @@ class EmployeViewSet(viewsets.ModelViewSet):
         except Employe.DoesNotExist:
             return Response({'error': 'Employé non trouvé'}, status=status.HTTP_404_NOT_FOUND)
 
-
+    def delete(self, *args, **kwargs):
+        user = self.user
+        super().delete(*args, **kwargs)
+        user.delete()  # Supprime le CustomUser associé
 
 class UserViewSet(viewsets.ModelViewSet):
     queryset=CustomUser.objects.all()

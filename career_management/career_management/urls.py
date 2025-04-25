@@ -25,12 +25,9 @@ router.register(r'notifications', NotificationViewSet, basename='notification')
 
 # Définir les patterns d'URL
 urlpatterns = [
-
     path('admin/', admin.site.urls),
-    
     path('api/', include(router.urls)),
     path('api/employes/<int:pk>/', EmployeViewSet.as_view({'put': 'update'}), name='update_employe_by_id'),
-
     path('api/password-reset/', PasswordResetRequestView.as_view(), name='password_reset'),
     path('api/password-reset/confirm/', PasswordResetConfirmView.as_view(), name='password_reset_confirm'),
     path('api/password-reset/confirm/<uidb64>/<token>/', PasswordResetConfirmView.as_view(), name='password_reset_confirm'),
