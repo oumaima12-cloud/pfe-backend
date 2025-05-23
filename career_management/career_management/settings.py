@@ -24,13 +24,26 @@ os.makedirs(LOGS_DIR, exist_ok=True)
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+import os
+from pathlib import Path
+from dotenv import load_dotenv
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+
+# Charger le fichier .env depuis la racine du projet
+load_dotenv(os.path.join(BASE_DIR, '.env'))
+
+# Récupérer la SECRET_KEY
+SECRET_KEY = os.getenv("DJANGO_SECRET_KEY")
+
+if not SECRET_KEY:
+    raise Exception("SECRET_KEY is not set or empty. Check your .env file.")
+
+
 
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
-
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-!n476(zcx6jb875u4%#-j&$)pf(-=0eh)^d#600c-=05md9195'
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
