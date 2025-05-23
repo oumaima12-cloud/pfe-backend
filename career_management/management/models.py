@@ -1,6 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 from django.contrib.auth import get_user_model
+from django.conf import settings
 
 
 
@@ -20,10 +21,12 @@ class CustomUserManager(BaseUserManager):
         user.is_superuser = True
         user.save(using=self._db)
         return user
-    
+
+
 class CustomUser(AbstractBaseUser, PermissionsMixin):
     def user_profile_picture_path(instance, filename):
         return f'profile_pictures/user_{instance.id}/{filename}'
+
     email = models.EmailField(unique=True)
     first_name = models.CharField(max_length=255)
     last_name = models.CharField(max_length=255)
@@ -39,11 +42,12 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
 
     def __str__(self):
         return self.email
-  
+
 
 class Admin(models.Model):
     user = models.OneToOneField(CustomUser, on_delete=models.CASCADE)
     # You can still add other admin-specific fields if needed.
+
 
 class Employe(models.Model):
     NIVEAUX = ['Débutant', 'Intermédiaire', 'Avancé', 'Expert']
@@ -53,14 +57,18 @@ class Employe(models.Model):
     competences = models.JSONField(
         default=dict,
         blank=True,
-    ) 
-    date_join=models.DateField(null=True, blank=True) 
+    )
+    formulaire = models.JSONField(
+        default=dict,
+        blank=True,
+    )
+    date_join = models.DateField(null=True, blank=True)
     formations = models.ManyToManyField('Formation', blank=True, related_name='employes')
     evenements = models.ManyToManyField('Evenement', blank=True, related_name='employes')
 
+
     def __str__(self):
-        return f"{self.user.first_name} {self.user.last_name} {self.equipe} {self.poste} {self.date_join} "
- 
+        return f"{self.user.first_name} {self.user.last_name} {self.equipe} {self.poste} {self.date_join}"
 
 
 class Formation(models.Model):
@@ -68,40 +76,155 @@ class Formation(models.Model):
     description = models.TextField()
     date = models.DateField()
     duree = models.IntegerField()
-    participants = models.ManyToManyField('Employe', related_name='formations_participees', blank=True)
+    participants = models.ManyToManyField('CustomUser', related_name='formations_participees', blank=True) 
 
     def __str__(self):
         return self.titre
+
 
 class Evenement(models.Model):
     titre = models.CharField(max_length=255)
     description = models.TextField()
     date = models.DateField()
     lieu = models.CharField(max_length=255)
+    participants = models.ManyToManyField(settings.AUTH_USER_MODEL, related_name='evenements_participes', blank=True)
+
+    def __str__(self):
+        return self.titre
+
 
 class Competence(models.Model):
-    nom = models.CharField(max_length=255,unique=True)
-   
-    
+    nom = models.CharField(max_length=255, unique=True)
+    categorie = models.CharField(max_length=100, default="Technique")
+
+    def __str__(self):
+        return self.nom
+
 
 class formulaire(models.Model):
-   
     utilisateur = models.ForeignKey(Employe, on_delete=models.CASCADE, related_name='formulaires')
-    competences = models.JSONField(
-        default=list,
-        blank=True,
-    )
-    
+    competences = models.JSONField(default=list, blank=True)
+    certifications = models.JSONField(default=list, blank=True)
     date_acquisition = models.DateField()
-   
+
+    niveaux_etude = models.CharField(
+        max_length=100,
+        choices=[
+            ('bac', 'Bac'),
+            ('licence', 'Licence'),
+            ('master', 'Master'),
+            ('ingenieur', 'Ingénieur'),
+            ('doctorat', 'Doctorat')
+        ],
+        blank=True
+    )
+
+    soft_skills_dominante = models.CharField(max_length=100, blank=True)
+
+    # 👉 Nouveaux champs pour le visa
+    a_visa = models.BooleanField(default=False)
+    date_debut_visa = models.DateField(null=True, blank=True)
+    date_fin_visa = models.DateField(null=True, blank=True)
+
+    def __str__(self):
+        return f"Formulaire de {self.utilisateur}"
 
 
-User = get_user_model()
+
 class Notification(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="notifications")
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, null=True, blank=True)
+    employe = models.ForeignKey('Employe', on_delete=models.CASCADE, null=True, blank=True)
     message = models.TextField()
     is_read = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"Notification pour {self.user.email}"
+        return self.message
+    
+
+
+class Certification(models.Model):
+    employe = models.ForeignKey(Employe, on_delete=models.CASCADE, related_name='certifications')
+    titre = models.CharField(max_length=255)
+    
+    def __str__(self):
+        return f"{self.titre} ({self.employe.user.username})"
+    
+
+
+class CyberEvent(models.Model):
+ #   evenement = models.OneToOneField(Evenement, on_delete=models.CASCADE, related_name='cyber_event')
+    title = models.CharField(max_length=255)
+    description = models.TextField(blank=True, null=True)  
+    date = models.DateField(blank=True, null=True)         
+    lieu = models.CharField(max_length=255, blank=True, null=True)  
+
+    url = models.URLField(blank=True, null=True)  
+
+
+from django.db import models
+from django.conf import settings
+from django.utils.translation import gettext_lazy as _
+
+class ParticipationRequest(models.Model):
+    STATUS_CHOICES = [
+        ('pending', _('En attente')),
+        ('approved', _('Approuvée')),
+        ('rejected', _('Rejetée')),
+    ]
+    
+    TYPE_CHOICES = [
+        ('event', _('Événement')),
+    ]
+    
+    employee = models.ForeignKey('Employe', on_delete=models.CASCADE, related_name='participation_requests')
+    event_title = models.CharField(max_length=255)
+    event_date = models.DateField()
+    event_url = models.URLField(blank=True, null=True)
+    event_type = models.CharField(max_length=10, choices=TYPE_CHOICES)
+    cyber_event = models.ForeignKey('CyberEvent', on_delete=models.SET_NULL, null=True, blank=True)
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='pending')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    admin_comment = models.TextField(blank=True, null=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = _('Demande de participation')
+        verbose_name_plural = _('Demandes de participation')
+    
+    def __str__(self):
+        return f"{self.employee.user.get_full_name()} - {self.event_title} ({self.get_status_display()})"
+    
+
+
+class FormationRequest(models.Model):
+    STATUS_CHOICES = [
+        ('pending', _('En attente')),
+        ('approved', _('Approuvée')),
+        ('rejected', _('Rejetée')),
+    ]
+    
+    TYPE_CHOICES = [
+        ('formation', _('Formation')),
+    ]
+    
+    employee = models.ForeignKey('Employe', on_delete=models.CASCADE, related_name='formation_requests')
+    formation_title = models.CharField(max_length=255)
+    formation_date = models.DateField()
+    formation_url = models.URLField(blank=True, null=True)
+    formation_type = models.CharField(max_length=10, choices=TYPE_CHOICES)
+    formation_budget = models.DecimalField(max_digits=10, decimal_places=2, help_text=_('Budget demandé pour la formation'))
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='pending')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    admin_comment = models.TextField(blank=True, null=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = _('Demande de formation')
+        verbose_name_plural = _('Demandes de formation')
+        
+    
+    def __str__(self):
+        return f"{self.employee.user.get_full_name()} - {self.formation_title} ({self.get_status_display()})"

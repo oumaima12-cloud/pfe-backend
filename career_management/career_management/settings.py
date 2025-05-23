@@ -13,6 +13,15 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 from pathlib import Path
 import os ;
 
+
+from pathlib import Path
+import os
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+LOGS_DIR = os.path.join(BASE_DIR, 'logs')
+os.makedirs(LOGS_DIR, exist_ok=True)
+
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -194,8 +203,10 @@ JAZZMIN_SETTINGS = {
     "show_ui_builder": True,
     "changeform_format": "horizontal_tabs",
     "changeform_format_overrides": {"auth.group": "vertical_tabs"},
+
     
 }
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
 
 JAZZMIN_UI_TWEAKS = {
@@ -248,3 +259,45 @@ DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+
+    'formatters': {
+        'verbose': {
+            'format': '{levelname} {asctime} {module} {process:d} {thread:d} {message}',
+            'style': '{',
+        },
+        'simple': {
+            'format': '{levelname} {message}',
+            'style': '{',
+        },
+    },
+
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'simple',
+        },
+        'security_file': {
+            'level': 'INFO',
+            'class': 'logging.FileHandler',
+            'filename': os.path.join(LOGS_DIR, 'security.log'),
+            'formatter': 'verbose',
+            'encoding': 'utf-8',
+        },
+    },
+
+    'loggers': {
+        'django': {
+            'handlers': ['console'],
+            'level': 'WARNING',
+            'propagate': True,
+        },
+        'security': {
+            'handlers': ['security_file'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+    },
+}
