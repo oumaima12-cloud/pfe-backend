@@ -224,7 +224,30 @@ class FormationRequest(models.Model):
         ordering = ['-created_at']
         verbose_name = _('Demande de formation')
         verbose_name_plural = _('Demandes de formation')
-        
+
     
     def __str__(self):
         return f"{self.employee.user.get_full_name()} - {self.formation_title} ({self.get_status_display()})"
+
+
+
+
+class HistoriqueParticipation(models.Model):
+    TYPE_CHOICES = [
+        ('formation', 'Formation'),
+        ('evenement', 'Événement'),
+    ]
+
+    employe = models.ForeignKey('Employe', on_delete=models.CASCADE, related_name='historique')
+    type_participation = models.CharField(max_length=10, choices=TYPE_CHOICES)
+    titre = models.CharField(max_length=255)
+    description = models.TextField(blank=True, null=True)
+    date = models.DateField()
+    lieu = models.CharField(max_length=255, blank=True, null=True)
+    budget = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    statut = models.CharField(max_length=50, default="Affecté")
+    source = models.CharField(max_length=100, default="Affectation Admin") 
+    date_enregistrement = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.employe.user.get_full_name()} - {self.titre} ({self.type_participation})"

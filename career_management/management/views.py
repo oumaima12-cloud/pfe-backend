@@ -977,6 +977,18 @@ class ParticipationRequestViewSet(viewsets.ModelViewSet):
 
         employe_user = participation_request.employee.user
 
+        HistoriqueParticipation.objects.create(
+            employe=participation_request.employee,
+            type_participation='evenement',  
+            titre=participation_request.event_title,
+            description=f"Validé par l'admin ",
+            date=participation_request.event_date,
+            lieu='',
+            budget=None,
+            statut='Approuvé',
+            source='Validation demande'
+        )
+
         Notification.objects.create(
             user=employe_user,
             message=f"✅ Votre demande de participation à l'événement '{participation_request.event_title}' a été approuvée."
@@ -1093,6 +1105,7 @@ from django.core.mail import EmailMultiAlternatives
 from django.conf import settings
 from .models import FormationRequest, Employe, Notification
 from .serializers import FormationRequestSerializer
+from .models import HistoriqueParticipation
 
 
 class FormationRequestViewSet(viewsets.ModelViewSet):
@@ -1334,6 +1347,16 @@ def test_log(request):
     logger.info(f"Adresse IP: {ip}")
 
     return HttpResponse("Log de sécurité enregistré.")
+
+
+from rest_framework import generics
+from .models import HistoriqueParticipation
+from .serializers import HistoriqueDemandeSerializer
+
+class HistoriqueDemandeListAPIView(generics.ListAPIView):
+    queryset = HistoriqueParticipation.objects.all()
+    serializer_class = HistoriqueDemandeSerializer
+
 
 
 

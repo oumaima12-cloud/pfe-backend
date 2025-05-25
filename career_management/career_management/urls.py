@@ -15,7 +15,7 @@ from management.views import (
 from django.conf import settings
 from django.conf.urls.static import static
 from management.views import affecter_formation_ou_evenement_par_admin,CertificationViewSet,test_log
-from management.views import ParticipantView, FormationNotificationView, EvenementNotificationView,FormationRequestViewSet,FormationRequestAPIView
+from management.views import ParticipantView, FormationNotificationView, EvenementNotificationView,FormationRequestViewSet,FormationRequestAPIView,HistoriqueDemandeListAPIView
 
 # Initialiser le routeur
 router = DefaultRouter()
@@ -49,6 +49,7 @@ urlpatterns = [
     path('api/request-participation/', ParticipationRequestAPIView.as_view(), name='request-participation'),
     path('api/employes/<int:pk>/', EmployeViewSet.as_view({'put': 'update'}), name='update_employe_by_id'),
     path('api/password-reset/', PasswordResetRequestView.as_view(), name='password_reset'),
+        path('api/historique-demandes/', HistoriqueDemandeListAPIView.as_view(), name='historique-demandes'),
     path('api/evenementsss/', EvenementCreateView.as_view(), name='evenement-create'),
     path('api/evenement-notification/', EvenementNotificationView.as_view(), name='evenement-notification'),
     path('api/password-reset/confirm/', PasswordResetConfirmView.as_view(), name='password_reset_confirm'),

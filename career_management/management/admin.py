@@ -8,3 +8,4 @@ admin.site.register(Formation)
 admin.site.register(Evenement)
 admin.site.register(Competence)
 admin.site.register(formulaire)
+
