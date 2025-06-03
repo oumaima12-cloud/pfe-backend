@@ -121,7 +121,6 @@ class formulaire(models.Model):
 
     soft_skills_dominante = models.CharField(max_length=100, blank=True)
 
-    # 👉 Nouveaux champs pour le visa
     a_visa = models.BooleanField(default=False)
     date_debut_visa = models.DateField(null=True, blank=True)
     date_fin_visa = models.DateField(null=True, blank=True)
@@ -251,3 +250,22 @@ class HistoriqueParticipation(models.Model):
 
     def __str__(self):
         return f"{self.employe.user.get_full_name()} - {self.titre} ({self.type_participation})"
+    
+
+    from django.db import models
+from django.core.validators import MinValueValidator, MaxValueValidator
+
+class Ouvrier(models.Model):
+    nom = models.CharField(max_length=100)
+    prenom = models.CharField(max_length=100)
+    email = models.EmailField()
+    date_naissance = models.DateField(null=True, blank=True)
+    
+    performance = models.IntegerField(
+        null=True, blank=True,
+        validators=[MinValueValidator(1), MaxValueValidator(5)],
+        help_text="Note de performance entre 1 et 5"
+    )
+
+    def __str__(self):
+        return f"{self.nom} {self.prenom}"

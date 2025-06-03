@@ -6,7 +6,7 @@ from management.views import (
     CompetenceViewSet, LoginView, SignupView, formulaireViewSet,
     UserViewSet, PasswordResetRequestView, PasswordResetConfirmView,
     participer, home, submit_formulaire, NotificationListView,
-    ParticipationRequestAPIView,EvenementCreateView
+    ParticipationRequestAPIView,EvenementCreateView,ImportOuvrierExcel
 )
 from management.views import (
     ParticipationRequestViewSet, 
@@ -49,9 +49,10 @@ urlpatterns = [
     path('api/request-participation/', ParticipationRequestAPIView.as_view(), name='request-participation'),
     path('api/employes/<int:pk>/', EmployeViewSet.as_view({'put': 'update'}), name='update_employe_by_id'),
     path('api/password-reset/', PasswordResetRequestView.as_view(), name='password_reset'),
-        path('api/historique-demandes/', HistoriqueDemandeListAPIView.as_view(), name='historique-demandes'),
+    path('api/historique-demandes/', HistoriqueDemandeListAPIView.as_view(), name='historique-demandes'),
     path('api/evenementsss/', EvenementCreateView.as_view(), name='evenement-create'),
     path('api/evenement-notification/', EvenementNotificationView.as_view(), name='evenement-notification'),
+    path('import-ouvriers/', ImportOuvrierExcel.as_view(), name='import-ouvriers'),
     path('api/password-reset/confirm/', PasswordResetConfirmView.as_view(), name='password_reset_confirm'),
     path('api/password-reset/confirm/<uidb64>/<token>/', PasswordResetConfirmView.as_view(), name='password_reset_confirm'),
     path('api/signup', SignupView.as_view(), name='signup'),

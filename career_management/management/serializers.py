@@ -332,4 +332,15 @@ class HistoriqueDemandeSerializer(serializers.ModelSerializer):
 
     def get_employee_email(self, obj):
         return obj.employe.user.email
+    
+
+
+from rest_framework import serializers
+from .models import Ouvrier
+
+class OuvrierSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Ouvrier
+        fields = ['id', 'nom', 'prenom', 'email', 'date_naissance', 'performance']
+        
 

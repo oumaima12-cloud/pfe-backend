@@ -1360,4 +1360,57 @@ class HistoriqueDemandeListAPIView(generics.ListAPIView):
 
 
 
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import status
+import openpyxl
+from datetime import datetime
+
+from .models import Ouvrier          # Ton modèle déjà créé
+from .serializers import OuvrierSerializer  # Ton serializer déjà créé
+
+class ImportOuvrierExcel(APIView):
+    def post(self, request):
+        excel_file = request.FILES.get('file')
+        if not excel_file:
+            return Response({"error": "Aucun fichier reçu."}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            wb = openpyxl.load_workbook(excel_file)
+            sheet = wb.active
+            ouvriers_crees = []
+
+            for i, row in enumerate(sheet.iter_rows(min_row=2, values_only=True), start=2):
+                nom, prenom, email, date_naissance, performance = row
+
+                try:
+                    date_naissance = datetime.strptime(str(date_naissance), "%Y-%m-%d").date()
+                except:
+                    date_naissance = None
+
+                if performance:
+                    try:
+                        performance = int(performance)
+                        if performance < 1 or performance > 5:
+                            performance = None
+                    except:
+                        performance = None
+
+                # Création de l'ouvrier
+                ouvrier = Ouvrier.objects.create(
+                    nom=nom,
+                    prenom=prenom,
+                    email=email,
+                    date_naissance=date_naissance,
+                    performance=performance
+                )
+                ouvriers_crees.append(ouvrier)
+
+            serializer = OuvrierSerializer(ouvriers_crees, many=True)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
 
